@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FenshiChart - 固定柱宽示例</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark-theme {
+      background-color: #000;
+      color: #eee;
+    }
+    body.light-theme {
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .page-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .page-header h1 {
+      margin-bottom: 5px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 16px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+    .stock-code {
+      font-weight: bold;
+    }
+    .price-info {
+      display: flex;
+      gap: 15px;
+    }
+    .price-item {
+      display: flex;
+      gap: 5px;
+    }
+    .price-label {
+      color: #888;
+    }
+    .price-value {
+      font-weight: 500;
+    }
+    .price-value.green {
+      color: #4CAF50;
+    }
+    .price-value.red {
+      color: #F44336;
+    }
+    .chart-container {
+      border-radius: 3px;
+      padding: 10px;
+      margin-bottom: 20px;
+      cursor: grab;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .dark-theme .chart-container {
+      background-color: #000;
+      border: 1px solid #222;
+    }
+    .light-theme .chart-container {
+      background-color: #fff;
+      border: 1px solid #ddd;
+    }
+    .chart-container:active {
+      cursor: grabbing;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    }
+    .dark-theme button {
+      background-color: #1a1a1a;
+      color: #eee;
+      border: 1px solid #333;
+    }
+    .light-theme button {
+      background-color: #f0f0f0;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    .dark-theme button:hover {
+      background-color: #333;
+    }
+    .light-theme button:hover {
+      background-color: #e0e0e0;
+    }
+    button.active {
+      background-color: #1677ff;
+      border-color: #1677ff;
+      color: white;
+    }
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .slider-label {
+      min-width: 150px;
+    }
+    .dark-theme .slider-label {
+      color: #aaa;
+    }
+    .light-theme .slider-label {
+      color: #555;
+    }
+    input[type="range"] {
+      flex: 1;
+      max-width: 300px;
+    }
+    .slider-value {
+      min-width: 50px;
+      text-align: right;
+    }
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .dark-theme .checkbox-label {
+      color: #aaa;
+    }
+    .light-theme .checkbox-label {
+      color: #555;
+    }
+    .time-range {
+      margin-top: 20px;
+      padding-top: 20px;
+      transition: border-color 0.3s;
+    }
+    .dark-theme .time-range {
+      border-top: 1px solid #333;
+    }
+    .light-theme .time-range {
+      border-top: 1px solid #ddd;
+    }
+    .time-range-title {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    .dark-theme .time-range-title {
+      color: #ccc;
+    }
+    .light-theme .time-range-title {
+      color: #444;
+    }
+    .scroll-controls {
+      display: flex;
+      gap: 10px;
+      margin: 15px 0;
+      align-items: center;
+    }
+    .scroll-controls button {
+      padding: 5px 10px;
+    }
+    #scroll-position-slider {
+      flex: 1;
+    }
+    .settings-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      transition: border-color 0.3s;
+    }
+    .dark-theme .settings-section {
+      border-top: 1px solid #333;
+    }
+    .light-theme .settings-section {
+      border-top: 1px solid #ddd;
+    }
+    .settings-title {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    .dark-theme .settings-title {
+      color: #ccc;
+    }
+    .light-theme .settings-title {
+      color: #444;
+    }
+    .settings-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .settings-column {
+      flex: 1;
+      min-width: 300px;
+    }
+    .section-subtitle {
+      font-size: 14px;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .dark-theme .section-subtitle {
+      color: #888;
+    }
+    .light-theme .section-subtitle {
+      color: #555;
+    }
+    .theme-switch {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .theme-icon {
+      font-size: 16px;
+    }
+    .btn-small {
+      padding: 2px 8px;
+      font-size: 12px;
+      margin-left: 5px;
+      cursor: pointer;
+      border-radius: 3px;
+      border: none;
+    }
+    .dark-theme .btn-small {
+      background: #444;
+      color: #ccc;
+    }
+    .light-theme .btn-small {
+      background: #ddd;
+      color: #333;
+    }
+    .dark-theme .btn-small:hover {
+      background: #555;
+    }
+    .light-theme .btn-small:hover {
+      background: #eee;
+    }
+    @media (max-width: 768px) {
+      .slider-container {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .price-info {
+        flex-direction: column;
+        gap: 5px;
+      }
+    }
+  </style>
+</head>
+<body class="dark-theme">
+  <div class="container">
+    <div class="page-header">
+      <h1>FenshiChart - 固定柱宽模式</h1>
+      <div class="subtitle">适合显示大量数据点的分时图，支持横向滚动、数据点高亮和右侧价格显示</div>
+    </div>
+    <div class="header">
+      <div class="title">固定柱宽分时图表</div>
+      <div class="theme-switch">
+        <span class="theme-icon">☀️</span>
+        <input type="checkbox" id="theme-toggle">
+        <span class="theme-icon">🌙</span>
+      </div>
+    </div>
+    
+    <div class="chart-header">
+      <div class="stock-code">sz002923 10:26</div>
+      <div class="price-info">
+        <div class="price-item">
+          <span class="price-label">价:</span>
+          <span class="price-value red">10.22</span>
+        </div>
+        <div class="price-item">
+          <span class="price-label">幅:</span>
+          <span class="price-value green">-2.29%</span>
+        </div>
+        <div class="price-item">
+          <span class="price-label">均:</span>
+          <span class="price-value">10.28</span>
+        </div>
+      </div>
+    </div>
+    
+    <div id="chart" class="chart-container"></div>
+    
+    <div class="scroll-controls">
+      <button id="btn-scroll-left">
+        <span>◀</span>
+      </button>
+      <input type="range" id="scroll-position-slider" min="0" max="100" value="100">
+      <button id="btn-scroll-right">
+        <span>▶</span>
+      </button>
+      <span id="scroll-position-value">100%</span>
+    </div>
+    
+    <div class="settings-section">
+      <div class="settings-title">图表设置</div>
+      
+      <div class="settings-row">
+        <div class="settings-column">
+          <div class="section-subtitle">图表功能</div>
+          
+          <div class="checkbox-container">
+            <input type="checkbox" id="enable-scroll" checked>
+            <span class="checkbox-label">启用横向滚动</span>
+          </div>
+          
+          <div class="checkbox-container">
+            <input type="checkbox" id="show-right-price" checked>
+            <span class="checkbox-label">显示右侧涨跌幅</span>
+          </div>
+          
+          <div class="checkbox-container">
+            <input type="checkbox" id="show-crosshair" checked>
+            <span class="checkbox-label">显示十字线</span>
+          </div>
+          
+          <div class="checkbox-container">
+            <input type="checkbox" id="tooltip-enabled" checked>
+            <span class="checkbox-label">显示鼠标悬停提示</span>
+          </div>
+          
+          <div class="checkbox-container">
+            <input type="checkbox" id="info-bar-enabled" checked>
+            <span class="checkbox-label">显示信息面板</span>
+          </div>
+          
+          <div class="section-subtitle" style="margin-top: 15px;">坐标类型</div>
+          
+          <div class="controls" style="margin-top: 5px;">
+            <button id="btn-coord-normal" class="active">普通坐标</button>
+            <button id="btn-coord-full">满占坐标</button>
+            <button id="btn-coord-limit">涨停板坐标</button>
+          </div>
+          
+          <div class="slider-container" id="limit-percentage-container" style="display: none;">
+            <span class="slider-label">涨跌停百分比:</span>
+            <input type="range" id="limit-percentage" min="1" max="20" value="10">
+            <span class="slider-value" id="limit-percentage-value">10%</span>
+          </div>
+          
+          <div class="slider-container" id="initial-price-container" style="display: none;">
+            <span class="slider-label">初始参考价格:</span>
+            <input type="number" id="initial-price" min="0.01" step="0.01" value="10.00" style="width: 80px;">
+            <button id="btn-set-initial-price" class="btn-small">设置</button>
+          </div>
+        </div>
+        
+        <div class="settings-column">
+          <div class="section-subtitle">柱图设置</div>
+          
+          <div class="slider-container">
+            <span class="slider-label">柱子宽度:</span>
+            <input type="range" id="bar-width" min="1" max="10" value="2">
+            <span class="slider-value" id="bar-width-value">2px</span>
+          </div>
+          
+          <div class="slider-container">
+            <span class="slider-label">柱子间距:</span>
+            <input type="range" id="bar-spacing" min="0" max="5" value="1">
+            <span class="slider-value" id="bar-spacing-value">1px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <button id="btn-add-data">添加数据点</button>
+      <button id="btn-simulate">模拟实时数据</button>
+      <button id="btn-reset">重置</button>
+    </div>
+    
+    <div class="time-range">
+      <div class="time-range-title">数据量控制</div>
+      
+      <div class="controls">
+        <button id="btn-data-small" class="active">少量数据</button>
+        <button id="btn-data-medium">中量数据</button>
+        <button id="btn-data-large">大量数据</button>
+      </div>
+      
+      <div class="slider-container">
+        <span class="slider-label">数据点数量:</span>
+        <input type="range" id="data-points" min="50" max="1000" value="100">
+        <span class="slider-value" id="data-points-value">100</span>
+      </div>
+    </div>
+  </div>
+  
+  <script src="fenshi.js"></script>
+  <script>
+    // 当前主题
+    let currentTheme = 'dark';
+    // 当前坐标类型
+    let currentCoordinateType = 'normal';
+    
+    // 创建图表实例
+    const chart = new FenshiChart('chart', {
+      height: 400,
+      theme: currentTheme,
+      padding: { top: 20, right: 60, bottom: 20, left: 60 },
+      showAverage: true,
+      barWidth: 2,
+      barSpacing: 1,
+      enableScroll: true,
+      showRightPrice: true,
+      showCrosshair: true,
+      tooltipEnabled: true,
+      coordinateType: currentCoordinateType,
+      limitPercentage: 10,
+      initialPrice: 10.33
+    });
+    
+    // 获取控制元素
+    const barWidthSlider = document.getElementById('bar-width');
+    const barWidthValue = document.getElementById('bar-width-value');
+    const barSpacingSlider = document.getElementById('bar-spacing');
+    const barSpacingValue = document.getElementById('bar-spacing-value');
+    const btnAddData = document.getElementById('btn-add-data');
+    const btnSimulate = document.getElementById('btn-simulate');
+    const btnReset = document.getElementById('btn-reset');
+    const enableScrollCheckbox = document.getElementById('enable-scroll');
+    const showRightPriceCheckbox = document.getElementById('show-right-price');
+    const showCrosshairCheckbox = document.getElementById('show-crosshair');
+    const tooltipEnabledCheckbox = document.getElementById('tooltip-enabled');
+    const infoBarEnabledCheckbox = document.getElementById('info-bar-enabled');
+    const dataPointsSlider = document.getElementById('data-points');
+    const dataPointsValue = document.getElementById('data-points-value');
+    const btnDataSmall = document.getElementById('btn-data-small');
+    const btnDataMedium = document.getElementById('btn-data-medium');
+    const btnDataLarge = document.getElementById('btn-data-large');
+    const scrollPositionSlider = document.getElementById('scroll-position-slider');
+    const scrollPositionValue = document.getElementById('scroll-position-value');
+    const btnScrollLeft = document.getElementById('btn-scroll-left');
+    const btnScrollRight = document.getElementById('btn-scroll-right');
+    const themeToggle = document.getElementById('theme-toggle');
+    
+    // 坐标类型控制元素
+    const btnCoordNormal = document.getElementById('btn-coord-normal');
+    const btnCoordFull = document.getElementById('btn-coord-full');
+    const btnCoordLimit = document.getElementById('btn-coord-limit');
+    const limitPercentageSlider = document.getElementById('limit-percentage');
+    const limitPercentageValue = document.getElementById('limit-percentage-value');
+    const limitPercentageContainer = document.getElementById('limit-percentage-container');
+    const initialPriceContainer = document.getElementById('initial-price-container');
+    const initialPriceInput = document.getElementById('initial-price');
+    
+    // 当前价格和时间
+    let currentPrice = 10.22;
+    let currentTime = new Date();
+    let simulationInterval;
+    let dataPointsCount = 100;
+    
+    // 初始化图表数据
+    function initializeChart() {
+      // 生成初始数据
+      const mockData = generateInitialData();
+      chart.setInitialData(mockData);
+      
+      // 更新当前价格和时间
+      if (mockData.length > 0) {
+        currentPrice = mockData[mockData.length - 1].price;
+        currentTime = mockData[mockData.length - 1].time;
+      }
+    }
+    
+    // 生成初始数据
+    function generateInitialData() {
+      const data = [];
+      
+      // 从9:30开始生成数据点
+      const today = new Date();
+      const baseTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 30, 0);
+      let time = new Date(baseTime);
+      let price = 10.0;
+      
+      // 买卖方向
+      const directions = ['buy', 'sell', 'neutral'];
+      
+      for (let i = 0; i < dataPointsCount; i++) {
+        // 模拟价格变动
+        const change = (Math.random() - 0.5) * 0.1;
+        price = Math.max(9.5, Math.min(10.5, price + change));
+        
+        // 模拟成交量
+        const volume = Math.floor(Math.random() * 5000) + 500;
+        
+        // 随机选择买卖方向
+        const direction = directions[Math.floor(Math.random() * directions.length)];
+        
+        // 添加数据点
+        data.push({
+          time: new Date(time),
+          price: price,
+          volume: volume,
+          direction: direction // 添加买卖方向
+        });
+        
+        // 时间增加5秒
+        time = new Date(time.getTime() + 5000);
+      }
+      
+      return data;
+    }
+    
+    // 添加单个数据点
+    function addDataPoint() {
+      // 更新时间（增加5秒）
+      currentTime = new Date(currentTime.getTime() + 5000);
+      
+      // 生成新价格（随机波动）
+      const change = (Math.random() - 0.5) * 0.05;
+      currentPrice = Math.max(9.5, Math.min(10.5, currentPrice + change));
+      
+      // 随机成交量
+      const volume = Math.floor(Math.random() * 3000) + 500;
+      
+      // 随机生成买卖方向
+      const directions = ['buy', 'sell', 'neutral'];
+      const direction = directions[Math.floor(Math.random() * directions.length)];
+      
+      // 添加到图表
+      chart.addData({
+        time: currentTime,
+        price: currentPrice,
+        volume: volume,
+        direction: direction // 添加买卖方向
+      });
+      
+      // 更新滚动位置滑块
+      updateScrollPositionSlider();
+    }
+    
+    // 开始实时数据模拟
+    function startSimulation() {
+      // 清除任何现有的模拟
+      stopSimulation();
+      
+      // 每秒添加一个数据点
+      simulationInterval = setInterval(() => {
+        addDataPoint();
+      }, 1000);
+      
+      // 更新按钮文本
+      btnSimulate.textContent = "停止模拟";
+      btnSimulate.onclick = stopSimulation;
+    }
+    
+    // 停止实时数据模拟
+    function stopSimulation() {
+      clearInterval(simulationInterval);
+      btnSimulate.textContent = "模拟实时数据";
+      btnSimulate.onclick = startSimulation;
+    }
+    
+    // 重置图表
+    function resetChart() {
+      stopSimulation();
+      initializeChart();
+      updateScrollPositionSlider();
+    }
+    
+    // 更新图表设置
+    function updateChartSettings() {
+      const barWidth = parseInt(barWidthSlider.value);
+      const barSpacing = parseInt(barSpacingSlider.value);
+      const enableScroll = enableScrollCheckbox.checked;
+      const showRightPrice = showRightPriceCheckbox.checked;
+      const showCrosshair = showCrosshairCheckbox.checked;
+      const tooltipEnabled = tooltipEnabledCheckbox.checked;
+      const infoBarEnabled = infoBarEnabledCheckbox.checked;
+      
+      chart.updateOptions({
+        barWidth: barWidth,
+        barSpacing: barSpacing,
+        enableScroll: enableScroll,
+        showRightPrice: showRightPrice,
+        showCrosshair: showCrosshair,
+        tooltipEnabled: tooltipEnabled,
+        infoBarEnabled: infoBarEnabled
+      });
+      
+      // 更新信息面板显示状态
+      updateChartHeader(infoBarEnabled);
+      
+      barWidthValue.textContent = `${barWidth}px`;
+      barSpacingValue.textContent = `${barSpacing}px`;
+    }
+    
+    // 切换坐标类型
+    function setCoordinateType(type) {
+      currentCoordinateType = type;
+      
+      // 设置按钮状态
+      btnCoordNormal.classList.remove('active');
+      btnCoordFull.classList.remove('active');
+      btnCoordLimit.classList.remove('active');
+      
+      // 显示/隐藏涨跌停百分比设置
+      if (type === 'limit') {
+        btnCoordLimit.classList.add('active');
+        limitPercentageContainer.style.display = 'flex';
+      } else if (type === 'full') {
+        btnCoordFull.classList.add('active');
+        limitPercentageContainer.style.display = 'none';
+      } else {
+        btnCoordNormal.classList.add('active');
+        limitPercentageContainer.style.display = 'none';
+      }
+      
+      // 更新图表
+      chart.updateOptions({
+        coordinateType: type
+      });
+    }
+    
+    // 更新滚动位置滑块
+    function updateScrollPositionSlider() {
+      const scrollPosition = chart.options.scrollPosition * 100;
+      scrollPositionSlider.value = scrollPosition;
+      scrollPositionValue.textContent = `${Math.round(scrollPosition)}%`;
+    }
+    
+    // 切换主题
+    function toggleTheme() {
+      const body = document.body;
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      // 更新 body 类
+      body.classList.remove('dark-theme', 'light-theme');
+      body.classList.add(`${currentTheme}-theme`);
+      
+      // 更新图表主题
+      chart.updateOptions({
+        theme: currentTheme
+      });
+    }
+    
+    // 事件监听
+    barWidthSlider.addEventListener('input', function() {
+      updateChartSettings();
+    });
+    
+    barSpacingSlider.addEventListener('input', function() {
+      updateChartSettings();
+    });
+    
+    enableScrollCheckbox.addEventListener('change', function() {
+      updateChartSettings();
+    });
+    
+    showRightPriceCheckbox.addEventListener('change', function() {
+      updateChartSettings();
+    });
+    
+    showCrosshairCheckbox.addEventListener('change', function() {
+      updateChartSettings();
+    });
+    
+    tooltipEnabledCheckbox.addEventListener('change', function() {
+      updateChartSettings();
+    });
+    
+    infoBarEnabledCheckbox.addEventListener('change', function() {
+      updateChartSettings();
+    });
+    
+    dataPointsSlider.addEventListener('input', function() {
+      dataPointsCount = parseInt(this.value);
+      dataPointsValue.textContent = dataPointsCount;
+    });
+    
+    dataPointsSlider.addEventListener('change', function() {
+      resetChart();
+      
+      // 更新数据量按钮状态
+      if (dataPointsCount <= 100) {
+        setActiveDataButton(btnDataSmall);
+      } else if (dataPointsCount <= 300) {
+        setActiveDataButton(btnDataMedium);
+      } else {
+        setActiveDataButton(btnDataLarge);
+      }
+    });
+    
+    // 主题切换事件
+    themeToggle.addEventListener('change', toggleTheme);
+    
+    // 坐标类型按钮事件
+    btnCoordNormal.addEventListener('click', function() {
+      setCoordinateType('normal');
+    });
+    
+    btnCoordFull.addEventListener('click', function() {
+      setCoordinateType('full');
+    });
+    
+    btnCoordLimit.addEventListener('click', function() {
+      setCoordinateType('limit');
+    });
+    
+    // 涨跌停百分比滑块事件
+    limitPercentageSlider.addEventListener('input', function() {
+      const value = parseInt(this.value);
+      limitPercentageValue.textContent = `${value}%`;
+      
+      if (currentCoordinateType === 'limit') {
+        chart.updateOptions({
+          limitPercentage: value
+        });
+      }
+    });
+    
+    btnAddData.addEventListener('click', addDataPoint);
+    btnSimulate.addEventListener('click', startSimulation);
+    btnReset.addEventListener('click', resetChart);
+    
+    btnDataSmall.addEventListener('click', function() {
+      setActiveDataButton(this);
+      dataPointsCount = 100;
+      dataPointsSlider.value = dataPointsCount;
+      dataPointsValue.textContent = dataPointsCount;
+      resetChart();
+    });
+    
+    btnDataMedium.addEventListener('click', function() {
+      setActiveDataButton(this);
+      dataPointsCount = 300;
+      dataPointsSlider.value = dataPointsCount;
+      dataPointsValue.textContent = dataPointsCount;
+      resetChart();
+    });
+    
+    btnDataLarge.addEventListener('click', function() {
+      setActiveDataButton(this);
+      dataPointsCount = 600;
+      dataPointsSlider.value = dataPointsCount;
+      dataPointsValue.textContent = dataPointsCount;
+      resetChart();
+    });
+    
+    // 设置活动数据按钮
+    function setActiveDataButton(button) {
+      btnDataSmall.classList.remove('active');
+      btnDataMedium.classList.remove('active');
+      btnDataLarge.classList.remove('active');
+      button.classList.add('active');
+    }
+    
+    // 滚动控制
+    scrollPositionSlider.addEventListener('input', function() {
+      const position = parseInt(this.value) / 100;
+      chart.setScrollPosition(position);
+      scrollPositionValue.textContent = `${this.value}%`;
+    });
+    
+    btnScrollLeft.addEventListener('click', function() {
+      const newPosition = Math.max(0, parseFloat(scrollPositionSlider.value) - 10);
+      scrollPositionSlider.value = newPosition;
+      chart.setScrollPosition(newPosition / 100);
+      scrollPositionValue.textContent = `${Math.round(newPosition)}%`;
+    });
+    
+    btnScrollRight.addEventListener('click', function() {
+      const newPosition = Math.min(100, parseFloat(scrollPositionSlider.value) + 10);
+      scrollPositionSlider.value = newPosition;
+      chart.setScrollPosition(newPosition / 100);
+      scrollPositionValue.textContent = `${Math.round(newPosition)}%`;
+    });
+    
+    // 移动设备检测，自动调整十字线和提示框
+    function isMobileDevice() {
+      return (window.innerWidth <= 768) || 
+             ('ontouchstart' in window) || 
+             (navigator.maxTouchPoints > 0);
+    }
+    
+    if (isMobileDevice()) {
+      showCrosshairCheckbox.checked = false;
+      tooltipEnabledCheckbox.checked = false;
+      updateChartSettings();
+    }
+    
+    // 更新图表头部信息面板显示
+    function updateChartHeader(show) {
+      const chartHeader = document.querySelector('.chart-header');
+      if (chartHeader) {
+        chartHeader.style.display = show ? 'flex' : 'none';
+      }
+    }
+    
+    // 初始化
+    initializeChart();
+    updateScrollPositionSlider();
+    
+    // 初始化信息面板显示状态
+    updateChartHeader(infoBarEnabledCheckbox.checked);
+  </script>
+</body>
+</html> 

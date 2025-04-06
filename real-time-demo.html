@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实时分时图表 - Real-time FenshiChart Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #141414;
+      color: #f0f0f0;
+    }
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .header {
+      background-color: #1f1f1f;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1677ff;
+    }
+    .main-content {
+      display: flex;
+      flex: 1;
+    }
+    .sidebar {
+      width: 250px;
+      background-color: #1f1f1f;
+      padding: 20px;
+      border-right: 1px solid #333;
+    }
+    .watchlist {
+      margin-top: 20px;
+    }
+    .watchlist-header {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .watchlist-item {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .watchlist-item:hover {
+      background-color: #2a2a2a;
+    }
+    .watchlist-item.active {
+      background-color: rgba(22, 119, 255, 0.1);
+      border-left: 3px solid #1677ff;
+    }
+    .stock-code {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .stock-name {
+      font-size: 12px;
+      color: #888;
+      margin-top: 2px;
+    }
+    .price-info {
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+    }
+    .price-change {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    .price-up {
+      color: #26A69A;
+    }
+    .price-down {
+      color: #EF5350;
+    }
+    .chart-section {
+      flex: 1;
+      padding: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .stock-details {
+      display: flex;
+      flex-direction: column;
+    }
+    .stock-title {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .stock-subtitle {
+      font-size: 14px;
+      color: #888;
+      margin-top: 5px;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      background-color: #2a2a2a;
+      color: #f0f0f0;
+      border: 1px solid #444;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background-color: #333;
+      border-color: #666;
+    }
+    button.selected {
+      background-color: #1677ff;
+      border-color: #1677ff;
+      color: white;
+    }
+    .chart-container {
+      flex: 1;
+      background-color: #1a1a1a;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .status-bar {
+      background-color: #1f1f1f;
+      padding: 10px 20px;
+      font-size: 12px;
+      color: #888;
+      display: flex;
+      justify-content: space-between;
+    }
+    .connection-status {
+      display: flex;
+      align-items: center;
+    }
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .connected {
+      background-color: #4CAF50;
+    }
+    .connecting {
+      background-color: #FFC107;
+    }
+    .disconnected {
+      background-color: #F44336;
+    }
+    .time-frames {
+      display: flex;
+      background-color: #2a2a2a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-left: 10px;
+    }
+    .time-frame {
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .time-frame.active {
+      background-color: #1677ff;
+      color: white;
+    }
+    .positive {
+      color: #F44336; /* 涨为红色（同花顺风格） */
+    }
+    .negative {
+      color: #4CAF50; /* 跌为绿色（同花顺风格） */
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <div class="logo">分时行情 FenshiChart</div>
+      <div class="connection-status">
+        <div id="status-indicator" class="status-indicator connecting"></div>
+        <span id="connection-status">Connecting...</span>
+      </div>
+    </div>
+    
+    <div class="main-content">
+      <div class="sidebar">
+        <div class="watchlist">
+          <div class="watchlist-header">
+            <span>自选股票</span>
+            <span>价格</span>
+          </div>
+          <div id="watchlist-container">
+            <!-- Watchlist items will be populated here -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="stock-details">
+            <div class="stock-title" id="current-stock-title">sz002923 - 测试股票</div>
+            <div class="stock-subtitle" id="current-stock-price">价格: 10.22 <span class="price-down">-2.29%</span></div>
+          </div>
+          
+          <div class="controls">
+            <div class="time-frames">
+              <div class="time-frame active" data-timeframe="1m">分时</div>
+              <div class="time-frame" data-timeframe="5m">5分钟</div>
+              <div class="time-frame" data-timeframe="15m">15分钟</div>
+              <div class="time-frame" data-timeframe="30m">30分钟</div>
+            </div>
+            <button id="btn-realtime" class="selected">实时</button>
+            <button id="btn-historical">历史</button>
+            <button id="btn-pause">暂停</button>
+          </div>
+        </div>
+        
+        <div id="chart" class="chart-container"></div>
+      </div>
+    </div>
+    
+    <div class="status-bar">
+      <div id="data-timestamp">最后更新: --:--:--</div>
+      <div id="data-count">数据点: 0</div>
+    </div>
+  </div>
+  
+  <script src="fenshi.js"></script>
+  <script>
+    // Stock data class - simulates WebSocket connection and data handling
+    class StockDataService {
+      constructor(onDataCallback, onConnectionChange) {
+        this.stocks = {
+          'sz002923': { code: 'sz002923', name: '润都股份', price: 10.22, change: -2.29, open: 10.50 },
+          'sh601318': { code: 'sh601318', name: '中国平安', price: 42.15, change: 1.35, open: 41.59 },
+          'sh600036': { code: 'sh600036', name: '招商银行', price: 35.67, change: 0.74, open: 35.40 },
+          'sz000002': { code: 'sz000002', name: '万科A', price: 8.58, change: -0.92, open: 8.66 },
+          'sh600519': { code: 'sh600519', name: '贵州茅台', price: 1542.00, change: 2.17, open: 1510.50 },
+          'sh688981': { code: 'sh688981', name: '中芯国际', price: 56.82, change: 3.65, open: 54.82 },
+          'sz300750': { code: 'sz300750', name: '宁德时代', price: 203.46, change: -1.23, open: 205.95 },
+          'sh600276': { code: 'sh600276', name: '恒瑞医药', price: 23.12, change: 0.52, open: 23.01 }
+        };
+        
+        this.currentStock = 'sz002923';
+        this.connected = false;
+        this.paused = false;
+        this.dataInterval = null;
+        this.reconnectInterval = null;
+        this.historicalMode = false;
+        
+        this.onDataCallback = onDataCallback;
+        this.onConnectionChange = onConnectionChange;
+        
+        this.historicalData = {};
+        this.realtimeData = {};
+        
+        // Initialize with empty data arrays for each stock
+        Object.keys(this.stocks).forEach(code => {
+          this.historicalData[code] = [];
+          this.realtimeData[code] = [];
+        });
+      }
+      
+      connect() {
+        this.onConnectionChange('connecting');
+        
+        // Simulate connection delay
+        setTimeout(() => {
+          this.connected = true;
+          this.onConnectionChange('connected');
+          
+          // Load initial historical data
+          this.loadHistoricalData(this.currentStock);
+          
+          // Start data stream if not in historical mode
+          if (!this.historicalMode) {
+            this.startRealTimeUpdates();
+          }
+        }, 1500);
+        
+        // Set up automatic reconnection
+        this.reconnectInterval = setInterval(() => {
+          if (!this.connected && !this.paused) {
+            this.connect();
+          }
+        }, 5000);
+      }
+      
+      disconnect() {
+        this.connected = false;
+        this.onConnectionChange('disconnected');
+        clearInterval(this.dataInterval);
+        clearInterval(this.reconnectInterval);
+      }
+      
+      togglePause() {
+        this.paused = !this.paused;
+        
+        if (this.paused) {
+          clearInterval(this.dataInterval);
+        } else if (this.connected && !this.historicalMode) {
+          this.startRealTimeUpdates();
+        }
+        
+        return this.paused;
+      }
+      
+      switchStock(stockCode) {
+        if (this.stocks[stockCode]) {
+          this.currentStock = stockCode;
+          
+          if (this.historicalMode) {
+            this.loadHistoricalData(stockCode);
+          } else {
+            // If we already have some realtime data, use it
+            if (this.realtimeData[stockCode].length > 0) {
+              this.onDataCallback({
+                stockCode: stockCode,
+                stockInfo: this.stocks[stockCode],
+                data: this.realtimeData[stockCode],
+                isInitialData: true
+              });
+            } else {
+              // Otherwise generate initial data and start streaming
+              this.generateInitialData(stockCode);
+            }
+          }
+          
+          return this.stocks[stockCode];
+        }
+        return null;
+      }
+      
+      setHistoricalMode(enabled) {
+        this.historicalMode = enabled;
+        
+        if (enabled) {
+          clearInterval(this.dataInterval);
+          this.loadHistoricalData(this.currentStock);
+        } else {
+          // Switch to real-time mode
+          if (this.connected && !this.paused) {
+            this.startRealTimeUpdates();
+          }
+        }
+      }
+      
+      loadHistoricalData(stockCode) {
+        const stock = this.stocks[stockCode];
+        
+        // If we've already generated historical data, use it
+        if (this.historicalData[stockCode].length > 0) {
+          this.onDataCallback({
+            stockCode: stockCode,
+            stockInfo: stock,
+            data: this.historicalData[stockCode],
+            isInitialData: true
+          });
+          return;
+        }
+        
+        // Generate historical data (one trading day)
+        const data = this.generateHistoricalData(stock);
+        this.historicalData[stockCode] = data;
+        
+        // Send data to callback
+        this.onDataCallback({
+          stockCode: stockCode,
+          stockInfo: stock,
+          data: data,
+          isInitialData: true
+        });
+      }
+      
+      generateHistoricalData(stock) {
+        const today = new Date();
+        const marketOpen = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 30, 0);
+        const marketClose = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 0, 0);
+        
+        // Create a full day of trading data
+        const data = [];
+        let time = new Date(marketOpen);
+        let price = stock.open;
+        let lastPrice = price;
+        
+        // Morning session (9:30 - 11:30)
+        while (time < new Date(today.getFullYear(), today.getMonth(), today.getDate(), 11, 30, 0)) {
+          // Random price movement biased towards final change
+          const targetChange = stock.price - stock.open;
+          const progressRatio = (time.getTime() - marketOpen.getTime()) / 
+                               (marketClose.getTime() - marketOpen.getTime());
+          
+          // Bias towards the target change, but with randomness
+          const bias = targetChange * progressRatio * 0.3;
+          const randomComponent = (Math.random() - 0.5) * 0.1;
+          const change = bias + randomComponent;
+          
+          price = Math.max(0.01, price + change);
+          
+          // Calculate volume - higher at open and near significant price movements
+          let volume = Math.floor(Math.random() * 5000) + 1000;
+          
+          // Higher volume at market open
+          if (time.getTime() - marketOpen.getTime() < 10 * 60 * 1000) {
+            volume *= 2.5;
+          }
+          
+          // Higher volume on significant price moves
+          if (Math.abs(price - lastPrice) > Math.abs(targetChange) * 0.01) {
+            volume *= 1.5;
+          }
+          
+          // 确定买卖方向
+          let direction;
+          if (price > lastPrice) {
+            direction = 'buy'; // 价格上涨，买方驱动
+          } else if (price < lastPrice) {
+            direction = 'sell'; // 价格下跌，卖方驱动
+          } else {
+            direction = 'neutral'; // 价格不变，中性
+          }
+          
+          data.push({
+            time: new Date(time),
+            price: price,
+            volume: volume,
+            direction: direction // 添加买卖方向
+          });
+          
+          lastPrice = price;
+          time = new Date(time.getTime() + 15000); // 15-second interval for historical data
+        }
+        
+        // Lunch break (11:30 - 13:00) - no data
+        time = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 13, 0, 0);
+        
+        // Afternoon session (13:00 - 15:00)
+        while (time <= marketClose) {
+          // Similar logic to morning session
+          const targetChange = stock.price - lastPrice;
+          const progressRatio = (time.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate(), 13, 0, 0).getTime()) / 
+                             (marketClose.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate(), 13, 0, 0).getTime());
+          
+          const bias = targetChange * progressRatio * 0.4;
+          const randomComponent = (Math.random() - 0.5) * 0.1;
+          const change = bias + randomComponent;
+          
+          price = Math.max(0.01, price + change);
+          
+          // Calculate volume - higher at close
+          let volume = Math.floor(Math.random() * 5000) + 1000;
+          
+          // Higher volume at market close
+          if (marketClose.getTime() - time.getTime() < 15 * 60 * 1000) {
+            volume *= 2;
+          }
+          
+          // 确定买卖方向
+          let direction;
+          if (price > lastPrice) {
+            direction = 'buy'; // 价格上涨，买方驱动
+          } else if (price < lastPrice) {
+            direction = 'sell'; // 价格下跌，卖方驱动
+          } else {
+            direction = 'neutral'; // 价格不变，中性
+          }
+          
+          data.push({
+            time: new Date(time),
+            price: price,
+            volume: volume,
+            direction: direction // 添加买卖方向
+          });
+          
+          lastPrice = price;
+          time = new Date(time.getTime() + 15000); // 15-second interval
+        }
+        
+        return data;
+      }
+      
+      generateInitialData(stockCode) {
+        const stock = this.stocks[stockCode];
+        
+        // Generate initial data (last 3 minutes)
+        const now = new Date();
+        const startTime = new Date(now.getTime() - 3 * 60 * 1000); // 3 minutes ago
+        
+        const data = [];
+        let time = new Date(startTime);
+        let price = stock.price - (Math.random() * 0.2 - 0.1); // Start close to current price
+        
+        //while (time < now) {
+          // Random price movement
+          const change = (Math.random() - 0.5) * 0.05;
+          price = Math.max(0.01, price + change);
+          
+          // Random volume
+          const volume = Math.floor(Math.random() * 2000) + 200;
+          
+          // 确定买卖方向 - 初始数据随机分配方向
+          const directions = ['buy', 'sell', 'neutral'];
+          const direction = directions[Math.floor(Math.random() * directions.length)];
+          
+          data.push({
+            time: new Date(time),
+            price: price,
+            volume: volume,
+            direction: direction // 添加买卖方向
+          });
+          
+          // 1-second interval for real-time data
+          time = new Date(time.getTime() + 1000);
+        //}
+        
+        // Store the data
+        this.realtimeData[stockCode] = data;
+        
+        // Send initial data to callback
+        this.onDataCallback({
+          stockCode: stockCode,
+          stockInfo: stock,
+          data: data,
+          isInitialData: true
+        });
+        
+        // Start real-time updates if connected and not paused
+        if (this.connected && !this.paused && !this.historicalMode) {
+          this.startRealTimeUpdates();
+        }
+      }
+      
+      startRealTimeUpdates() {
+        // Clear any existing interval
+        clearInterval(this.dataInterval);
+        
+        // Start sending data at regular intervals
+        this.dataInterval = setInterval(() => {
+          if (!this.connected || this.paused || this.historicalMode) {
+            return;
+          }
+          
+          const stock = this.stocks[this.currentStock];
+          const lastDataPoint = this.realtimeData[this.currentStock][this.realtimeData[this.currentStock].length - 1];
+          
+          // Generate new price with small random change
+          const change = (Math.random() - 0.5) * 0.05;
+          const newPrice = Math.max(0.01, lastDataPoint.price + change);
+          
+          // Update stock price
+          stock.price = newPrice;
+          stock.change = ((newPrice - stock.open) / stock.open) * 100;
+          
+          // New time point (current time)
+          const now = new Date();
+          
+          // Volume with some randomness
+          const volume = Math.floor(Math.random() * 1000) + 100;
+          
+          // 确定买卖方向，根据价格变化
+          let direction;
+          if (newPrice > lastDataPoint.price) {
+            direction = 'buy'; // 价格上涨，买方驱动
+          } else if (newPrice < lastDataPoint.price) {
+            direction = 'sell'; // 价格下跌，卖方驱动
+          } else {
+            direction = 'neutral'; // 价格不变，中性
+          }
+          
+          // Create new data point
+          const newDataPoint = {
+            time: now,
+            price: newPrice,
+            volume: volume,
+            direction: direction // 添加买卖方向
+          };
+          
+          // Add to real-time data store
+          this.realtimeData[this.currentStock].push(newDataPoint);
+          
+          // Limit data points (keep last 10 minutes = 600 points at 1 second interval)
+          if (this.realtimeData[this.currentStock].length > 600) {
+            this.realtimeData[this.currentStock].shift();
+          }
+          
+          // Send update
+          this.onDataCallback({
+            stockCode: this.currentStock,
+            stockInfo: stock,
+            data: [newDataPoint],
+            isInitialData: false
+          });
+        }, 2000); // Update every second
+      }
+      
+      // Get current stock info
+      getCurrentStockInfo() {
+        return this.stocks[this.currentStock];
+      }
+      
+      // Get all stocks for watchlist
+      getAllStocks() {
+        return this.stocks;
+      }
+    }
+    
+    // Initialize chart and stock data service
+    document.addEventListener('DOMContentLoaded', () => {
+      // Create chart instance
+      const chart = new FenshiChart('chart', {
+        height: 600,
+        backgroundColor: '#1a1a1a',
+        lineColor: '#36a2eb',
+        averageColor: '#ffcd56',
+        gridColor: '#333',
+        textColor: '#aaa',
+        upBarColor: '#F44336',  // 涨为红色（同花顺风格）
+        downBarColor: '#4CAF50',  // 跌为绿色（同花顺风格）
+        averagePeriod: 20,
+        showAverage: true
+      });
+      
+      // Initialize UI elements
+      const btnRealtime = document.getElementById('btn-realtime');
+      const btnHistorical = document.getElementById('btn-historical');
+      const btnPause = document.getElementById('btn-pause');
+      const statusIndicator = document.getElementById('status-indicator');
+      const connectionStatus = document.getElementById('connection-status');
+      const dataTimestamp = document.getElementById('data-timestamp');
+      const dataCount = document.getElementById('data-count');
+      const currentStockTitle = document.getElementById('current-stock-title');
+      const currentStockPrice = document.getElementById('current-stock-price');
+      const watchlistContainer = document.getElementById('watchlist-container');
+      const timeFrames = document.querySelectorAll('.time-frame');
+      
+      // Data point counter
+      let pointCount = 0;
+      
+      // Handle data updates
+      const onDataUpdate = (data) => {
+        if (data.isInitialData) {
+          // Set initial data
+          chart.setInitialData(data.data);
+          pointCount = data.data.length;
+        } else {
+          // Add new data point
+          data.data.forEach(point => {
+            chart.addData(point);
+            pointCount++;
+          });
+        }
+        
+        // Update UI elements
+        updateStockInfo(data.stockInfo);
+        dataCount.textContent = `数据点: ${pointCount}`;
+        dataTimestamp.textContent = `最后更新: ${formatTime(new Date())}`;
+      };
+      
+      // Handle connection status changes
+      const onConnectionChange = (status) => {
+        statusIndicator.className = 'status-indicator ' + status;
+        
+        switch (status) {
+          case 'connected':
+            connectionStatus.textContent = '已连接';
+            break;
+          case 'connecting':
+            connectionStatus.textContent = '连接中...';
+            break;
+          case 'disconnected':
+            connectionStatus.textContent = '已断开';
+            break;
+        }
+      };
+      
+      // Create stock data service
+      const stockService = new StockDataService(onDataUpdate, onConnectionChange);
+      
+      // Update UI with stock info
+      const updateStockInfo = (stockInfo) => {
+        currentStockTitle.textContent = `${stockInfo.code} - ${stockInfo.name}`;
+        
+        const changeClass = stockInfo.change >= 0 ? 'price-up' : 'price-down';
+        const changeSign = stockInfo.change >= 0 ? '+' : '';
+        
+        currentStockPrice.innerHTML = `价格: ${stockInfo.price.toFixed(2)} <span class="${changeClass}">${changeSign}${stockInfo.change.toFixed(2)}%</span>`;
+      };
+      
+      // Format time as HH:MM:SS
+      const formatTime = (date) => {
+        return date.toTimeString().substring(0, 8);
+      };
+      
+      // Populate watchlist
+      const populateWatchlist = () => {
+        const stocks = stockService.getAllStocks();
+        watchlistContainer.innerHTML = '';
+        
+        Object.values(stocks).forEach(stock => {
+          const isActive = stock.code === stockService.currentStock;
+          const changeClass = stock.change >= 0 ? 'price-up' : 'price-down';
+          const changeSign = stock.change >= 0 ? '+' : '';
+          
+          const itemElement = document.createElement('div');
+          itemElement.className = `watchlist-item${isActive ? ' active' : ''}`;
+          itemElement.dataset.code = stock.code;
+          
+          itemElement.innerHTML = `
+            <div class="stock-code">${stock.code}</div>
+            <div class="stock-name">${stock.name}</div>
+            <div class="price-info">
+              <span>${stock.price.toFixed(2)}</span>
+              <span class="${changeClass}">${changeSign}${stock.change.toFixed(2)}%</span>
+            </div>
+          `;
+          
+          itemElement.addEventListener('click', () => {
+            // Set all items as inactive
+            document.querySelectorAll('.watchlist-item').forEach(item => {
+              item.classList.remove('active');
+            });
+            
+            // Set current item as active
+            itemElement.classList.add('active');
+            
+            // Switch to this stock
+            const stockInfo = stockService.switchStock(stock.code);
+            if (stockInfo) {
+              updateStockInfo(stockInfo);
+            }
+          });
+          
+          watchlistContainer.appendChild(itemElement);
+        });
+      };
+      
+      // Event listeners for buttons
+      btnRealtime.addEventListener('click', () => {
+        setActiveButton(btnRealtime);
+        stockService.setHistoricalMode(false);
+      });
+      
+      btnHistorical.addEventListener('click', () => {
+        setActiveButton(btnHistorical);
+        stockService.setHistoricalMode(true);
+      });
+      
+      btnPause.addEventListener('click', () => {
+        const isPaused = stockService.togglePause();
+        
+        if (isPaused) {
+          btnPause.textContent = '继续';
+        } else {
+          btnPause.textContent = '暂停';
+        }
+      });
+      
+      // Time frame selection
+      timeFrames.forEach(frame => {
+        frame.addEventListener('click', () => {
+          timeFrames.forEach(f => f.classList.remove('active'));
+          frame.classList.add('active');
+          
+          // In a real app, this would change the data granularity
+          // For demo, we'll just log it
+          console.log(`Switched to ${frame.dataset.timeframe} timeframe`);
+        });
+      });
+      
+      // Helper to set active button
+      function setActiveButton(activeBtn) {
+        [btnRealtime, btnHistorical].forEach(btn => {
+          btn.classList.remove('selected');
+        });
+        activeBtn.classList.add('selected');
+      }
+      
+      // Update watchlist periodically
+      setInterval(() => {
+        if (stockService.connected) {
+          populateWatchlist();
+        }
+      }, 1000);
+      
+      // Initialize
+      populateWatchlist();
+      stockService.connect();
+      
+      // Handle window resize
+      window.addEventListener('resize', () => {
+        chart.resize();
+      });
+    });
+  </script>
+</body>
+</html> 

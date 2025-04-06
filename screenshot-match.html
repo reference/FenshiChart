@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分时图表 - 截图匹配模式</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: A20px;
+      background-color: #0e1117;
+      color: #eee;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .note {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: rgba(255, 204, 86, 0.1);
+      border: 1px solid rgba(255, 204, 86, 0.3);
+      border-radius: 3px;
+      font-size: 14px;
+      color: #ffcc56;
+    }
+    .reference-container {
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .chart-container {
+      background-color: #0e1117;
+      border: 1px solid #222;
+      border-radius: 3px;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #ccc;
+      border-bottom: 1px solid #333;
+      padding-bottom: 5px;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    button {
+      background-color: #1a1a1a;
+      color: #eee;
+      border: 1px solid #333;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #333;
+    }
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .checkbox-label {
+      color: #aaa;
+    }
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .slider-label {
+      min-width: 150px;
+      color: #aaa;
+    }
+    input[type="range"] {
+      flex: 1;
+      max-width: 300px;
+    }
+    .slider-value {
+      min-width: 50px;
+      text-align: right;
+    }
+    .reference-image {
+      max-width: 100%;
+      border: 1px solid #333;
+      margin-top: 10px;
+      display: block;
+    }
+    .positive {
+      color: #F44336; /* 涨为红色（同花顺风格） */
+    }
+    .negative {
+      color: #4CAF50; /* 跌为绿色（同花顺风格） */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">分时图截图匹配模式</div>
+    </div>
+    
+    <div class="note">
+      此模式使用固定的数据集来生成与参考图像相似的分时图表，便于进行可视化比较和调试。
+    </div>
+    
+    <div class="chart-container" id="chart"></div>
+    
+    <div class="controls">
+      <button id="btn-reset">重置图表</button>
+      <button id="btn-toggle-average">显示/隐藏均线</button>
+    </div>
+    
+    <div class="checkbox-container">
+      <input type="checkbox" id="show-right-price" checked>
+      <span class="checkbox-label">显示右侧涨跌幅</span>
+    </div>
+    
+    <div class="slider-container">
+      <span class="slider-label">柱子宽度:</span>
+      <input type="range" id="bar-width" min="1" max="10" value="3">
+      <span class="slider-value" id="bar-width-value">3px</span>
+    </div>
+    
+    <div class="slider-container">
+      <span class="slider-label">柱子间距:</span>
+      <input type="range" id="bar-spacing" min="0" max="5" value="1">
+      <span class="slider-value" id="bar-spacing-value">1px</span>
+    </div>
+    
+    <div class="reference-container">
+      <div class="section-title">参考图像</div>
+      <div>这是一个标准的A股分时图样例，用于比较我们的渲染效果</div>
+      <img src="https://img.alicdn.com/imgextra/i1/O1CN01QBybN623bUCZpWKGs_!!6000000007279-2-tps-1664-928.png" alt="A股分时图参考" class="reference-image">
+    </div>
+  </div>
+  
+  <script src="fenshi.js"></script>
+  <script>
+    // DOM 元素
+    const chartElement = document.getElementById('chart');
+    const btnReset = document.getElementById('btn-reset');
+    const btnToggleAverage = document.getElementById('btn-toggle-average');
+    const showRightPriceCheckbox = document.getElementById('show-right-price');
+    const barWidthSlider = document.getElementById('bar-width');
+    const barWidthValue = document.getElementById('bar-width-value');
+    const barSpacingSlider = document.getElementById('bar-spacing');
+    const barSpacingValue = document.getElementById('bar-spacing-value');
+    
+    // 创建图表实例
+    const chart = new FenshiChart('chart', {
+      height: 400,
+      backgroundColor: '#0e1117',
+      lineColor: '#36a2eb',
+      averageColor: '#ffcd56',
+      gridColor: '#333',
+      textColor: '#888',
+      upBarColor: '#F44336',  // 涨为红色（同花顺风格）
+      downBarColor: '#4CAF50',  // 跌为绿色（同花顺风格）
+      padding: { top: 20, right: 60, bottom: 80, left: 60 },
+      showAverage: true,
+      barWidth: parseInt(barWidthSlider.value),
+      barSpacing: parseInt(barSpacingSlider.value),
+      showRightPrice: showRightPriceCheckbox.checked
+    });
+    
+    // 生成固定的数据集
+    function generateFixedData() {
+      const data = [];
+      
+      // 设置基准时间为9:30
+      const today = new Date();
+      const baseTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 30, 0);
+      
+      // 固定的价格模式 - 这里模拟一些常见的价格模式
+      const pricePattern = [
+        10.22, 10.25, 10.28, 10.26, 10.24, 10.21, 10.20, 10.22, 10.24, 10.27,
+        10.30, 10.32, 10.34, 10.31, 10.29, 10.30, 10.28, 10.29, 10.31, 10.28,
+        10.25, 10.22, 10.20, 10.18, 10.15, 10.12, 10.10, 10.08, 10.05, 10.08,
+        10.10, 10.12, 10.15, 10.18, 10.22, 10.25, 10.28, 10.30, 10.32, 10.35,
+        10.38, 10.40, 10.42, 10.44, 10.42, 10.40, 10.38, 10.35, 10.36, 10.38,
+        10.36, 10.34, 10.32, 10.30, 10.28, 10.26, 10.28, 10.30, 10.32, 10.34,
+        10.36, 10.38, 10.40, 10.42, 10.40, 10.38, 10.36, 10.34, 10.32, 10.30,
+        10.28, 10.26, 10.24, 10.22, 10.20, 10.18, 10.16, 10.18, 10.20, 10.22
+      ];
+      
+      // 设置恒定的时间间隔（3分钟）
+      const timeInterval = 3 * 60 * 1000;
+      
+      // 生成数据
+      for (let i = 0; i < pricePattern.length; i++) {
+        const time = new Date(baseTime.getTime() + i * timeInterval);
+        
+        // 随机但合理的成交量
+        const volume = Math.floor(Math.random() * 8000) + 2000;
+        
+        // 确定买卖方向
+        let direction;
+        if (i > 0) {
+          if (pricePattern[i] > pricePattern[i-1]) {
+            direction = 'buy'; // 价格上涨，买方驱动
+          } else if (pricePattern[i] < pricePattern[i-1]) {
+            direction = 'sell'; // 价格下跌，卖方驱动
+          } else {
+            direction = 'neutral'; // 价格不变，中性
+          }
+        } else {
+          direction = 'neutral'; // 第一个点默认中性
+        }
+        
+        // 添加数据点
+        data.push({
+          time: time,
+          price: pricePattern[i],
+          volume: volume,
+          direction: direction // 添加买卖方向
+        });
+      }
+      
+      return data;
+    }
+    
+    // 初始化图表
+    function initChart() {
+      const data = generateFixedData();
+      chart.setInitialData(data);
+    }
+    
+    // 绑定事件
+    btnReset.addEventListener('click', initChart);
+    
+    btnToggleAverage.addEventListener('click', () => {
+      chart.updateOptions({
+        showAverage: !chart.options.showAverage
+      });
+    });
+    
+    showRightPriceCheckbox.addEventListener('change', () => {
+      chart.updateOptions({
+        showRightPrice: showRightPriceCheckbox.checked
+      });
+    });
+    
+    barWidthSlider.addEventListener('input', () => {
+      const value = parseInt(barWidthSlider.value);
+      barWidthValue.textContent = `${value}px`;
+      chart.updateOptions({ barWidth: value });
+    });
+    
+    barSpacingSlider.addEventListener('input', () => {
+      const value = parseInt(barSpacingSlider.value);
+      barSpacingValue.textContent = `${value}px`;
+      chart.updateOptions({ barSpacing: value });
+    });
+    
+    // 处理窗口大小变化
+    window.addEventListener('resize', () => {
+      chart.resize(chartElement.clientWidth);
+    });
+    
+    // 初始化
+    initChart();
+  </script>
+</body>
+</html> 

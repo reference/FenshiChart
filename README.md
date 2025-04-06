@@ -2,8 +2,9 @@
 
 FenshiChart 是一个轻量级的 JavaScript 图表库，专为显示股票、加密货币等金融产品的实时行情数据而设计。它支持秒级别更新，提供流畅的数据可视化体验，适合构建专业的交易和金融数据分析应用。
 
-![FenshiChart Demo](https://github.com/yourusername/fenshi/raw/main/screenshot.png)
-
+![FenshiChart Demo](screenshot01.png)
+![FenshiChart Demo](screenshot02.png)
+![FenshiChart Demo](screenshot03.png)
 ## 特点
 
 - 实时渲染，支持秒级数据更新

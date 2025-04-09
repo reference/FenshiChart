@@ -553,10 +553,10 @@ class FenshiChart {
         this.yRange.max = this.priceInfo.high;
         break;
         
-      case 'limit': // 涨停板坐标 - 基于开盘价和涨跌停百分比
+      case 'limit': // 涨停板坐标 - 基于初始价格或开盘价和涨跌停百分比
         const limitPercent = this.options.limitPercentage / 100;
-        // 使用开盘价作为基准价格计算涨跌停
-        const referencePrice = this.priceInfo.open;
+        // 优先使用initialPrice作为基准价格计算涨跌停，如果未设置则使用开盘价
+        const referencePrice = this.options.initialPrice !== null ? this.options.initialPrice : this.priceInfo.open;
         this.yRange.min = referencePrice * (1 - limitPercent);
         this.yRange.max = referencePrice * (1 + limitPercent);
         break;
@@ -1002,7 +1002,7 @@ class FenshiChart {
     } else if (num >= 1000) {
       return (num / 1000).toFixed(2) + 'k';
     }
-    return num.toString();
+    return num.toFixed(2);
   }
   
   // Public API
@@ -1164,7 +1164,7 @@ class FenshiChart {
     this.tooltip.innerHTML = `
       <div style="font-weight: bold; margin-bottom: 5px;">${this.formatTime(dataPoint.time)}</div>
       <div>价格: <span style="font-weight: bold;">${dataPoint.price.toFixed(2)}</span></div>
-      <div>均价: <span style="color: ${this.options.colors.average}; font-weight: bold;">${avgPrice.toFixed(2)}</span></div>
+      ${avgPrice !== undefined ? `<div>均价: <span style="color: ${this.options.colors.average}; font-weight: bold;">${avgPrice.toFixed(2)}</span></div>` : ''}
       <div>涨跌: <span style="color: ${change >= 0 ? this.options.colors.upBar : this.options.colors.downBar}; font-weight: bold;">${changeSign}${change.toFixed(2)} (${changeSign}${changePercent.toFixed(2)}%)</span></div>
       <div>成交量: ${this.formatNumber(dataPoint.volume)}</div>
       <div>金额: ${this.formatNumber(amount)}</div>
@@ -1659,4 +1659,4 @@ class FenshiChart {
 // If using as ES module
 if (typeof exports !== 'undefined') {
   exports.FenshiChart = FenshiChart;
-} 
+}
